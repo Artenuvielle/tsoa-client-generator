@@ -2,26 +2,45 @@ import {
   type ExportDeclaration,
   factory,
   type Identifier,
-  type ImportDeclaration,
-  type InterfaceDeclaration,
-  type NamedExports,
-  type NamedImports,
   type SourceFile,
-  type StringLiteral,
   SyntaxKind,
-  type TypeAliasDeclaration,
   type Node,
   type TypeNode,
-  type PropertySignature,
-  type EnumDeclaration,
   NodeArray,
 } from 'typescript';
 import { ResolvedImportable, UnresolvedImportable } from './generator/Import';
 import { SourceFileLoader } from './SourceFileLoader';
 import { dirname, join } from 'path';
-import { expect } from './util';
+import { expect, expectIfDefined } from './util';
 
-const knownTSTypeIdentifiers: string[] = ['Array', 'Omit', 'Partial', 'Pick', 'Promise', 'Date'];
+const knownTSTypeIdentifiers: string[] = [
+  'Array',
+  'Promise',
+  'Date',
+
+  'Awaited',
+  'Partial',
+  'Required',
+  'Readonly',
+  'Record',
+  'Pick',
+  'Omit',
+  'Exclude',
+  'Extract',
+  'NonNullable',
+  'Parameters',
+  'ConstructorParameters',
+  'ReturnType',
+  'InstanceType',
+  'NoInfer',
+  'ThisParameterType',
+  'OmitThisParameter',
+  'ThisType',
+  'Uppercase',
+  'Lowercase',
+  'Capitalize',
+  'Uncapitalize',
+];
 
 export class TypeResolver {
   constructor(public outputPath: string) {}
@@ -34,7 +53,7 @@ export class TypeResolver {
     if (this.typeNodesToGenerate[name] !== undefined) return true;
 
     const foundType = (node: Node, requiredTypeNodes: TypeNode[], typeParameters: string[]): void => {
-      console.log('Adding import type: ' + name);
+      console.log('Adding type declaration: ' + name);
       this.typeNodesToGenerate[name] = node;
       requiredTypeNodes.forEach((typeNode) =>
         this.recursiveResolveDataType(currentSourceFile, typeNode, typeParameters)
@@ -45,9 +64,10 @@ export class TypeResolver {
 
     for (const statement of currentSourceFile.statements) {
       switch (statement.kind) {
-        case SyntaxKind.ImportDeclaration:
+        case SyntaxKind.ImportDeclaration: {
+          const importDeclaration = expect(statement, SyntaxKind.ImportDeclaration);
           if (
-            ((statement as ImportDeclaration).importClause?.namedBindings as NamedImports | undefined)?.elements?.find(
+            expectIfDefined(importDeclaration.importClause?.namedBindings, SyntaxKind.NamedImports)?.elements?.find(
               (element) => element.name.text === name
             ) !== undefined
           ) {
@@ -55,7 +75,7 @@ export class TypeResolver {
               this.sourceFileLoader.load(
                 join(
                   dirname(currentSourceFile.fileName),
-                  ((statement as ImportDeclaration).moduleSpecifier as StringLiteral).text
+                  expect(importDeclaration.moduleSpecifier, SyntaxKind.StringLiteral).text
                 )
               ),
               name,
@@ -64,13 +84,15 @@ export class TypeResolver {
             );
           }
           break;
-        case SyntaxKind.ExportDeclaration:
+        }
+        case SyntaxKind.ExportDeclaration: {
           if (!exportOnly) break;
-          if ((statement as ExportDeclaration).exportClause === undefined) {
+          const exportDeclaration = expect(statement, SyntaxKind.ExportDeclaration);
+          if (exportDeclaration.exportClause === undefined) {
             possibleExportStatements.push(statement as ExportDeclaration);
           } else {
             if (
-              ((statement as ExportDeclaration).exportClause as NamedExports)?.elements?.find(
+              expectIfDefined(exportDeclaration.exportClause, SyntaxKind.NamedExports)?.elements?.find(
                 (element) => element.name.text === name
               ) !== undefined
             ) {
@@ -78,7 +100,7 @@ export class TypeResolver {
                 SourceFileLoader.get().load(
                   join(
                     dirname(currentSourceFile.fileName),
-                    ((statement as ExportDeclaration).moduleSpecifier as StringLiteral).text
+                    expect(exportDeclaration.moduleSpecifier!, SyntaxKind.StringLiteral).text
                   )
                 ),
                 name,
@@ -88,69 +110,73 @@ export class TypeResolver {
             }
           }
           break;
-        case SyntaxKind.TypeAliasDeclaration:
+        }
+        case SyntaxKind.TypeAliasDeclaration: {
+          const typeAliasDeclaratrion = expect(statement, SyntaxKind.TypeAliasDeclaration);
           if (
             exportOnly &&
-            (statement as TypeAliasDeclaration).modifiers?.find(
-              (modifier) => modifier.kind === SyntaxKind.ExportKeyword
-            ) === undefined
-          ) {
-            break;
-          }
-          if ((statement as TypeAliasDeclaration).name.text === name) {
-            foundType(
-              statement,
-              [(statement as TypeAliasDeclaration).type],
-              (statement as TypeAliasDeclaration).typeParameters?.map((typeParameter) => typeParameter.name.text) ?? []
-            );
-            return true;
-          }
-          break;
-        case SyntaxKind.InterfaceDeclaration:
-          if (
-            exportOnly &&
-            (statement as InterfaceDeclaration).modifiers?.find(
-              (modifier) => modifier.kind === SyntaxKind.ExportKeyword
-            ) === undefined
-          ) {
-            break;
-          }
-          if ((statement as InterfaceDeclaration).name.text === name) {
-            foundType(
-              statement,
-              [
-                ...((statement as InterfaceDeclaration).heritageClauses?.flatMap(
-                  (heritageClause) => heritageClause.types
-                ) ?? []),
-                ...((statement as InterfaceDeclaration).members
-                  ?.map((member) => (member as PropertySignature).type)
-                  .filter((e) => e !== undefined) ?? []),
-              ],
-              (statement as InterfaceDeclaration).typeParameters?.map((typeParameter) => typeParameter.name.text) ?? []
-            );
-            return true;
-          }
-          break;
-        case SyntaxKind.EnumDeclaration:
-          if (
-            exportOnly &&
-            (statement as EnumDeclaration).modifiers?.find((modifier) => modifier.kind === SyntaxKind.ExportKeyword) ===
+            typeAliasDeclaratrion.modifiers?.find((modifier) => modifier.kind === SyntaxKind.ExportKeyword) ===
               undefined
           ) {
             break;
           }
-          if ((statement as EnumDeclaration).name.text === name) {
+          if (typeAliasDeclaratrion.name.text === name) {
+            foundType(
+              statement,
+              [typeAliasDeclaratrion.type],
+              typeAliasDeclaratrion.typeParameters?.map((typeParameter) => typeParameter.name.text) ?? []
+            );
+            return true;
+          }
+          break;
+        }
+        case SyntaxKind.InterfaceDeclaration: {
+          const interfaceDeclaration = expect(statement, SyntaxKind.InterfaceDeclaration);
+          if (
+            exportOnly &&
+            interfaceDeclaration.modifiers?.find((modifier) => modifier.kind === SyntaxKind.ExportKeyword) === undefined
+          ) {
+            break;
+          }
+          if (interfaceDeclaration.name.text === name) {
+            foundType(
+              statement,
+              [
+                ...(interfaceDeclaration.heritageClauses?.flatMap((heritageClause) => heritageClause.types) ?? []),
+                ...(interfaceDeclaration.members
+                  ?.map((member) => expect(member, SyntaxKind.PropertySignature).type)
+                  .filter((e) => e !== undefined) ?? []),
+              ],
+              interfaceDeclaration.typeParameters?.map((typeParameter) => typeParameter.name.text) ?? []
+            );
+            return true;
+          }
+          break;
+        }
+        case SyntaxKind.EnumDeclaration: {
+          const enumDeclaration = expect(statement, SyntaxKind.EnumDeclaration);
+          if (
+            exportOnly &&
+            enumDeclaration.modifiers?.find((modifier) => modifier.kind === SyntaxKind.ExportKeyword) === undefined
+          ) {
+            break;
+          }
+          if (enumDeclaration.name.text === name) {
             foundType(statement, [], []);
             return true;
           }
           break;
+        }
       }
     }
     for (const exportStatement of possibleExportStatements) {
       if (
         this.generateTypeNode(
           this.sourceFileLoader.load(
-            join(dirname(currentSourceFile.fileName), (exportStatement.moduleSpecifier as StringLiteral).text)
+            join(
+              dirname(currentSourceFile.fileName),
+              expect(exportStatement.moduleSpecifier!, SyntaxKind.StringLiteral).text
+            )
           ),
           name,
           true,
@@ -245,6 +271,6 @@ export class TypeResolver {
   }
 
   getNodeArray(): NodeArray<Node> {
-    return factory.createNodeArray(Object.entries(this.typeNodesToGenerate).map(([_name, node]) => node));
+    return factory.createNodeArray(Object.entries(this.typeNodesToGenerate).map(([_, node]) => node));
   }
 }
