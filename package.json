@@ -1,6 +1,6 @@
 {
   "name": "@arten/tsoa-client-generator",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Generate typescript api directly based on tsoa controllers via typescript compiler API",
   "main": "build/index.js",
   "types": "build/index.d.ts",
