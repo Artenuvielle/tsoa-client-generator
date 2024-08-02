@@ -53,7 +53,6 @@ export class TypeResolver {
     if (this.typeNodesToGenerate[name] !== undefined) return true;
 
     const foundType = (node: Node, requiredTypeNodes: TypeNode[], typeParameters: string[]): void => {
-      console.log('Adding type declaration: ' + name);
       this.typeNodesToGenerate[name] = node;
       requiredTypeNodes.forEach((typeNode) =>
         this.recursiveResolveDataType(currentSourceFile, typeNode, typeParameters)

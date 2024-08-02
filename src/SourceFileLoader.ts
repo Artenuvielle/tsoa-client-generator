@@ -27,7 +27,6 @@ export class SourceFileLoader {
     const cachedEntry = SourceFileLoader.cachedSourceFiles[path];
     if (cachedEntry !== undefined) return cachedEntry.sourceFile;
 
-    console.log('Loading source file: ' + path);
     const fileContents = readFileSync(path, 'utf-8');
     const sourceFile = createSourceFile(path, fileContents, ScriptTarget.Latest);
     SourceFileLoader.cachedSourceFiles[path] = { fileContents, sourceFile };

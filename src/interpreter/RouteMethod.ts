@@ -38,12 +38,14 @@ export class RouteMethod {
     });
 
     if (this.route !== undefined) {
-      const routeParamNameIterator = this.route?.matchAll(/\{[^}]\}/g);
+      const routeParamNameIterator = this.route?.matchAll(/\{([^}]+)\}/g);
       let next = routeParamNameIterator.next();
       while (next.done !== true) {
         if (next.value.length !== 2) this.throwInvalidRoutMethod();
         const routeParamName = next.value[1];
-        const routeParamAST = declaration.parameters.find((parameter) => parameter.name.getText() === routeParamName);
+        const routeParamAST = declaration.parameters.find(
+          (parameter) => expect(parameter.name, SyntaxKind.Identifier).text === routeParamName
+        );
         if (routeParamAST === undefined) this.throwInvalidRoutMethod();
         else this.routeParams[routeParamName] = routeParamAST;
         next = routeParamNameIterator.next();
