@@ -1,0 +1,11 @@
+openapi: 3.0.0
+info:
+  title: Basic API
+  version: 1.0.0
+paths:
+  /health:
+    get:
+      responses:
+        '200':
+          content:
+            type: string

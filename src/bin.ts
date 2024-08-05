@@ -6,6 +6,7 @@ import { generateClient } from '.';
 function main() {
   const options = program
     //.option('-e, --entry-file <path>', 'entry file of the tsoa app')
+    .option('-c, --client <string>', 'name of @hey-api client to use', 'fetch')
     .requiredOption('-g, --controller-path-globs <globs...>', 'glob patterns for finding tsoa controller classes')
     .requiredOption(
       '-o, --output-client-directory <path>',
@@ -18,6 +19,7 @@ function main() {
     //entryFile: options.entryFile,
     controllerPathGlobs: options.controllerPathGlobs,
     clientDirectory: options.outputClientDirectory,
+    client: options.client ?? 'fetch',
   });
 }
 

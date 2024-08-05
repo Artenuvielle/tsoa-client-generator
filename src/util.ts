@@ -24,6 +24,7 @@ import {
   InterfaceDeclaration,
   PropertySignature,
   EnumDeclaration,
+  TypeLiteralNode,
 } from 'typescript';
 
 type KindMappdings = {
@@ -45,6 +46,7 @@ type KindMappdings = {
   [SyntaxKind.PropertySignature]: PropertySignature;
   [SyntaxKind.StringLiteral]: StringLiteral;
   [SyntaxKind.TypeAliasDeclaration]: TypeAliasDeclaration;
+  [SyntaxKind.TypeLiteral]: TypeLiteralNode;
   [SyntaxKind.TypeOperator]: TypeOperatorNode;
   [SyntaxKind.TypeReference]: TypeReferenceNode;
   [SyntaxKind.UnionType]: UnionTypeNode;

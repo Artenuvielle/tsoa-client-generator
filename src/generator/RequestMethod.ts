@@ -81,9 +81,7 @@ export class RequestMethod {
               undefined
             ),
           ],
-      factory.createTypeReferenceNode(cancelablePromiseIdentifier, [
-        this.method.declaration.type ?? factory.createKeywordTypeNode(SyntaxKind.VoidKeyword),
-      ]),
+      factory.createTypeReferenceNode(cancelablePromiseIdentifier, [this.method.returnType]),
       factory.createBlock(
         [
           factory.createReturnStatement(

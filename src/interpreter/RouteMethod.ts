@@ -1,4 +1,4 @@
-import { MethodDeclaration, ParameterDeclaration, SyntaxKind } from 'typescript';
+import { factory, MethodDeclaration, ParameterDeclaration, SyntaxKind, TypeNode } from 'typescript';
 import { expect, readAnnotations } from '../util';
 import { Controller } from './Controller';
 
@@ -16,6 +16,7 @@ export class RouteMethod {
   public route?: string;
   public bodyParam?: ParameterDeclaration;
   public routeParams: Record<string, ParameterDeclaration> = {};
+  public returnType: TypeNode;
 
   constructor(public controller: Controller, public declaration: MethodDeclaration) {
     this.name = expect(declaration.name, SyntaxKind.Identifier).text;
@@ -49,6 +50,19 @@ export class RouteMethod {
         if (routeParamAST === undefined) this.throwInvalidRoutMethod();
         else this.routeParams[routeParamName] = routeParamAST;
         next = routeParamNameIterator.next();
+      }
+    }
+
+    if (declaration.type === undefined) {
+      this.returnType = factory.createKeywordTypeNode(SyntaxKind.VoidKeyword);
+    } else {
+      if (this.isAsync()) {
+        const promiseReference = expect(declaration.type, SyntaxKind.TypeReference);
+        if (promiseReference.typeArguments === undefined || promiseReference.typeArguments.length !== 1)
+          this.throwInvalidRoutMethod();
+        this.returnType = promiseReference.typeArguments?.[0] ?? factory.createKeywordTypeNode(SyntaxKind.VoidKeyword);
+      } else {
+        this.returnType = declaration.type;
       }
     }
   }

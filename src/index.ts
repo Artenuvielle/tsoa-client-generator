@@ -1,5 +1,4 @@
-import { cpSync, writeFileSync } from 'fs';
-import { readdir } from 'fs/promises';
+import { writeFileSync } from 'fs';
 import { join } from 'path';
 import {
   type ClassDeclaration,
@@ -18,18 +17,22 @@ import { Controller } from './interpreter/Controller';
 import { Service } from './generator/Service';
 import { Import, ResolvedImportable } from './generator/Import';
 import { TypeResolver } from './TypeResolver';
+import { createClient } from '@hey-api/openapi-ts';
 
 export interface ClientGeneratorConfig {
   //entryFile?: string;
-  controllerPathGlobs: /*?*/ string[];
+  controllerPathGlobs: string[];
   clientDirectory: string;
+  client: '@hey-api/client-axios' | '@hey-api/client-fetch' | 'angular' | 'axios' | 'fetch' | 'node' | 'xhr';
 }
 
 export const generateClient = async (options: ClientGeneratorConfig): Promise<void> => {
-  const srcDir = join(__dirname, '..', 'template');
+  console.log('Running client generation');
   const destDir = options.clientDirectory;
-  (await readdir(srcDir)).forEach((src) => {
-    cpSync(join(srcDir, src), join(destDir, src), { recursive: true });
+  await createClient({
+    client: options.client,
+    input: join(__dirname, '..', 'openapi.yaml'),
+    output: destDir,
   });
 
   const sourceFileLoader = SourceFileLoader.get();
@@ -78,4 +81,5 @@ export const generateClient = async (options: ClientGeneratorConfig): Promise<vo
     join(destDir, 'types.gen.ts'),
     printer.printList(ListFormat.MultiLine, typeResolver.getNodeArray(), typesFile)
   );
+  console.log('Client generation finished');
 };

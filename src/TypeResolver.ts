@@ -53,6 +53,7 @@ export class TypeResolver {
     if (this.typeNodesToGenerate[name] !== undefined) return true;
 
     const foundType = (node: Node, requiredTypeNodes: TypeNode[], typeParameters: string[]): void => {
+      console.log('Adding type declaration: ' + name);
       this.typeNodesToGenerate[name] = node;
       requiredTypeNodes.forEach((typeNode) =>
         this.recursiveResolveDataType(currentSourceFile, typeNode, typeParameters)
@@ -209,11 +210,10 @@ export class TypeResolver {
     const traverseSingle = (t: TypeNode): ResolvedImportable[] => {
       return this.recursiveResolveDataType(currentSourceFile, t, typeParameters);
     };
-    const traverseArray = (ts: NodeArray<TypeNode>): ResolvedImportable[] => {
-      return ts.reduce(
-        (acc, t) => acc.concat(...this.recursiveResolveDataType(currentSourceFile, t, typeParameters)),
-        [] as ResolvedImportable[]
-      );
+    const traverseArray = (ts: NodeArray<TypeNode> | Array<TypeNode>): ResolvedImportable[] => {
+      const result: ResolvedImportable[] = [];
+      ts.forEach((t) => result.push(...this.recursiveResolveDataType(currentSourceFile, t, typeParameters)));
+      return result;
     };
     switch (type.kind) {
       case SyntaxKind.TypeReference: {
@@ -257,10 +257,16 @@ export class TypeResolver {
       case SyntaxKind.IntersectionType: {
         return traverseArray(expect(type, SyntaxKind.IntersectionType).types);
       }
+      case SyntaxKind.TypeLiteral: {
+        return traverseArray(
+          expect(type, SyntaxKind.TypeLiteral)
+            .members.map((element) => expect(element, SyntaxKind.PropertySignature).type)
+            .filter((e) => e !== undefined)
+        );
+      }
       case SyntaxKind.BooleanKeyword:
       case SyntaxKind.NumberKeyword:
       case SyntaxKind.StringKeyword:
-      case SyntaxKind.TypeLiteral:
       case SyntaxKind.LiteralType:
         return [];
       default:
